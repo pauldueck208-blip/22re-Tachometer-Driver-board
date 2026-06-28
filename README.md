@@ -1,4 +1,8 @@
-The tachometer that I had died, and doing some investigation the original Toshiba IC had died. With them being out of production, the only options were to design a new board around a new frequency to voltage chip, or a micro controller. I chose the latter, picking an Attiny85 and as the meter that Toyota made for the 1st gen 4runner is not very linear. This code and board design should work for any voltage based meters driven by some sort of frequency.
+# 22re Tachometer driver board
+
+#### A tachometer driver board for a 1st gen 4runner and 22re, using a signal from the negative terminal.
+
+With the orginal ICs that Toyota used for their tachometer being out of production, the only options to fix a 1st gen 4runner's tachometer is to design a new board around a new style of frequency to voltage IC, or a micro controller. The latter was chosen for this project, using an Attiny85 as the meter that Toyota made for the 1st gen 4runner is not very linear, and Attiny85 is more flexible than a LM2917N. This code and board design should work for any voltage based meters driven by some sort of frequency.
 
 The board only needs 3 inputs: power, ground, and a frequency input that corresponds with engine rpm. It was designed around receiving a signal from the coil negitive pin, so the resitor values to the optocoupler likely will need to change if a different input method is chosen.
 
