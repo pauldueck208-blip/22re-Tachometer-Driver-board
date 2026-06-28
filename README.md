@@ -8,4 +8,4 @@ The board only needs 3 inputs: power, ground, and a frequency input that corresp
 
 The board has provisions for a dip switch to change cylinder counts (As in the case of an engine swap), as the common 5vz and 3rz engine swaps send the tachometer a different frequency than a 22r. 
 
-The current issues with the code and board are: The meter moves in steps when it should move smoothly, and the code only reads every other pulse gap that it sees.
+The current issues with the code and board are: The meter doesn't fall back to the proper rpm after revving the engine(I believe it's due to wear of the needle rod, as tapping the dash fixes it), and the code only reads every other pulse gap that it sees.
