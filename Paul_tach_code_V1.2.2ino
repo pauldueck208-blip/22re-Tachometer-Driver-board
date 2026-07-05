@@ -1,11 +1,12 @@
 /*
-Attiny Atachometer code V1.2.1
+V1.2.2
 
+Tachometer code for dirty coil negitive signal
 This code measures the time it takes for the coil to fire, measuring the time between the each coil dewll ending.
 It assumes that the incoming signal only goes high (or low) when the coil is fired, not when dwell starts.
 It will attempt to ignore bounces at the end of the spark, by triggering a timer that will not let the rpm be calculated until the signal stays low for a set time.
 
-There are provisions for being able to flip a dip switch and have the tachometer be setup for a new cylinder count without being reprogrammed.
+There are provisions for being able to flip a dip switch and have the tachometer be setup for a new cylinder count.
 
 Written 6/2026
 Paul Dueck
@@ -13,23 +14,26 @@ Paul Dueck
 */
 #include "MultiMap.h"
 #include "PinChangeInterrupt.h"
-const int COIL = 2;      //Coil input      Attiny85 = 2
-const int tach_out = 1;  //Meter signal    Attiny85 = 1
-const int cyl_in = 0;    //Engine swap pin Attiny85 = 0
+const int COIL = 8;       //Coil input      Attiny85 = 2
+const int tach_out = 11;  //Meter signal    Attiny85 = 1
+const int cyl_in = 0;     //Engine swap pin Attiny85 = 0
 
+bool coil_hap;
 volatile bool allow_count;
+bool first;
+volatile unsigned long mycros;
 const long min_time_down = 1000;  //Time (in micros) before a pulse length is accepted
-const long time_out = 500;        //Time before rpm gets set to 0
-float correction = 2.2;           // Variable to correct pulse_time
-//4 stroke = 2.2, 2 stroke = 1.1?
-int cyl = 4;                      // Amount of cylinders the motor has
-//If engine swap is not in the plans, set cyl_new to be the same as cyl manually
-int cyl_new = 6;                  // Amount of cylinders a swap motor would have
-volatile unsigned long timed_out;
-volatile unsigned long time_out_millis = millis();
+unsigned long min_micros;
+const long time_out = 500;  //Time before rpm gets set to 0
+unsigned long time_out_millis;
 unsigned long coil_high_first;
 unsigned long coil_high_second;
-
+unsigned long avgpulse;  // Average Rpm
+float correction = 2.2;  // Variable to correct pulse_time
+//4 stroke = 2.2, 2 stroke = 1.1?
+int cyl = 4;  // Amount of cylinders the motor has
+//If engine swap is not in the plans, set cyl_new to be the same as cyl manually
+int cyl_new = 6;  // Amount of cylinders a swap motor would have
 
 // Lookup table
 float array_rpm[] = { 0, 500, 1000, 2000, 3000, 4000, 5000, 6000, 7000, 8000, 9000 };  // Lookup Rpm
@@ -41,14 +45,11 @@ int size = 11;  // Amount of values stored in one table
 
 
 void setup() {
-
-
-
   pinMode(cyl_in, INPUT);
   pinMode(COIL, INPUT_PULLUP);
   pinMode(tach_out, OUTPUT);
   attachPCINT(digitalPinToPCINT(COIL), COIL_sense, CHANGE);
-  digitalWrite(COIL, LOW);
+  digitalWrite(tach_out, LOW);
   delay(100);  // Let the Arduino settle before work
 
   // Engine swap code
@@ -58,43 +59,36 @@ void setup() {
 }
 
 void loop() {
-
   volatile unsigned long coil_high1;
   volatile unsigned long coil_high2;
   unsigned long pulse_time;
-  unsigned long avgpulse;  // Average pulse_in
-  int rpm;                 // Generated Rpm by measuring pulseIn
-  float tach_PWM;          // Output
-
+  int rpm;         // Generated Rpm by measuring pulseIn
 
   //Timeout if no new signals
-  if (time_out_millis - timed_out >= time_out) {
+  if (millis() - time_out_millis >= time_out) {
+    coil_high1 = 0;
+    coil_high2 = 0;
     avgpulse = 0;
-    tach_PWM = 0;
   }
   //Only trigger if isr lets it
   if (allow_count == 1) {
     disablePinChangeInterrupt(COIL);
     coil_high1 = coil_high_first;
     coil_high2 = coil_high_second;
-    enablePinChangeInterrupt(COIL);
-
-    //If it wants to be stupid, ignore it.
-    if (pulse_time > 1000000) {
-      return;
-    }
     pulse_time = coil_high2 - coil_high1;
     avgpulse = runAvg(avgpulse, pulse_time);
-
-    //Time to RPM
-    rpm = correction * 60.0 * (1000000.0 / (pulse_time * cyl));
-    // Interpolation
-    float tach_PWM = multiMap<float>(rpm, array_rpm, array_PWM, size);
-    //If for some reason PWM wishes to wrap, well NO.
-
+    //If it wants to be stupid, ignore it.
+    if (avgpulse > 1000000) {
+      return;
+    }
+    enablePinChangeInterrupt(COIL);
     allow_count = 0;
   }
-
+  //Time to RPM
+  rpm = correction * 60.0 * (1000000.0 / (avgpulse * cyl));
+  // Interpolation
+ float tach_PWM = multiMap<float>(rpm, array_rpm, array_PWM, size);
+  //If for some reason PWM wishes to wrap, well NO.
   if (tach_PWM > 255) {
     analogWrite(tach_out, 255);
   } else {
@@ -105,12 +99,7 @@ void loop() {
 
 
 void COIL_sense() {
-
-  bool coil_hap;
-  bool first;
-  unsigned long mycros = micros();
-  unsigned long min_micros;
-
+  mycros = micros();
   coil_hap = digitalRead(COIL);
   if (coil_hap == 1 && mycros - min_micros >= min_time_down) {  //Measuring time between 2 pulses
     if (first == 0) {
@@ -122,7 +111,7 @@ void COIL_sense() {
       allow_count = 1;
       first = 0;
     }
-    timed_out = time_out_millis;  //Timeout function
+    time_out_millis = millis();  //Timeout function
   }
   min_micros = mycros;  //Reset "allow" timer
 }
