@@ -14,17 +14,19 @@ Paul Dueck
 */
 #include "MultiMap.h"
 #include "PinChangeInterrupt.h"
-const int COIL = 8;       //Coil input      Attiny85 = 2
-const int tach_out = 11;  //Meter signal    Attiny85 = 1
+const int COIL = 2;       //Coil input      Attiny85 = 2
+const int tach_out = 1;  //Meter signal    Attiny85 = 1
 const int cyl_in = 0;     //Engine swap pin Attiny85 = 0
 
 bool coil_hap;
 volatile bool allow_count;
 bool first;
 volatile unsigned long mycros;
-const long min_time_down = 1000;  //Time (in micros) before a pulse length is accepted
+// Set min_time_down to be just smaller in porportion to rpm
+// If redline == 5000, set to around 3000, red == 8000, set to around 1500.
+const long min_time_down = 2500;  //Time (in micros) before a pulse length is accepted
 unsigned long min_micros;
-const long time_out = 500;  //Time before rpm gets set to 0
+const long time_out = 500;  //Time before rpm gets set to 0 after COIL_sense stops seeing pulses
 unsigned long time_out_millis;
 unsigned long coil_high_first;
 unsigned long coil_high_second;
@@ -97,7 +99,6 @@ void loop() {
 }
 
 
-
 void COIL_sense() {
   mycros = micros();
   coil_hap = digitalRead(COIL);
@@ -118,5 +119,5 @@ void COIL_sense() {
 
 //Average rpm calculator
 unsigned long runAvg(unsigned long avg, unsigned long n) {
-  return avg = (avg * 3 + n) / 4;
+  return avg = (avg * 1 + n) / 2;
 }
