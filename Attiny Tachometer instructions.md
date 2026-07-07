@@ -88,12 +88,11 @@ This board should be used after you have verified that the original IC on the fa
 
 
 
-The board and code should work this any meter driven by rising voltage, but it has only been tested on a 1st gen 4runner tachometer, and 5$ Amazon mA meter.
+The board and code should work this any meter driven by rising voltage, but it has only been tested on a 1st gen 4runner tachometer, and $5 Amazon mA meter.
 
 
 
 Board Type B was a backup in case the simpler Board Type A wouldn't work. It is untested, use at your own risk.
-
 Check the schematic for component values.
 
 
